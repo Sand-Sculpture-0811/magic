@@ -2,20 +2,10 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {Readable} from 'node:stream';
 import {createApp as createProductionApp} from './server.mjs';
-
-function createApp(options = {}) {
-  return createProductionApp({
-    key: '',
-    model: 'glm-5.3-flash',
-    publicOrigin: '',
-    accessCode: '',
-    fetchImpl: async () => {
-      throw Error('Unexpected upstream request in test');
-    },
-    ...options
-  });
-}
+// Tests must never inherit deployment origins, access codes, models or API credentials.
+function createApp(options={}){return createProductionApp({baseURL:'https://open.bigmodel.cn/api/paas/v4',key:'',model:'glm-5.3-flash',publicOrigin:'',accessCode:'',fetchImpl:async()=>{throw Error('Unexpected upstream request in test');},...options});}
 function request(app,{path='/api/chat',method='POST',body={mode:'chat',messages:[{role:'user',content:'你好'}]},origin='http://localhost:8765',host='localhost:8765',code=''}={}){return new Promise(resolve=>{const req=Readable.from([Buffer.from(JSON.stringify(body))]);Object.assign(req,{url:path,method,headers:{host,origin,'content-type':'application/json','x-astra-access':code}});const res={writeHead(status,headers){this.status=status;},end(text){resolve({status:this.status,text:String(text),json:()=>JSON.parse(text)});}};app.emit('request',req,res);});}
 test('GLM exact model, style and context request; response excludes reasoning',async()=>{let payload;const app=createApp({key:'test-only',fetchImpl:async(url,options)=>{assert.equal(url,'https://open.bigmodel.cn/api/paas/v4/chat/completions');payload=JSON.parse(options.body);return new Response(JSON.stringify({choices:[{finish_reason:'stop',message:{content:'测试回答',reasoning_content:'private'}}]}));}});const r=await request(app,{body:{mode:'chat',style:'listen',context:'测试摘要',messages:[{role:'user',content:'你好'}]}});assert.equal(r.status,200);assert.equal(r.json().text,'测试回答');assert.equal(payload.model,'glm-5.3-flash');assert.equal(payload.messages.length,3);assert.match(payload.messages[0].content,/不主动布置任务/);assert.equal(payload.stream,false);});
 test('public requests require strong access code and same origin',async()=>{const app=createApp({key:'test-only',publicOrigin:'https://example.com',accessCode:'a-private-test-code'});assert.equal((await request(app,{host:'example.com',origin:'https://example.com'})).status,401);assert.equal((await request(app,{host:'example.com',origin:'https://evil.com',code:'a-private-test-code'})).status,403);const missing=createApp({key:'test-only',publicOrigin:'https://example.com',accessCode:''});assert.equal((await request(missing,{host:'example.com',origin:'https://example.com'})).status,503);});
 test('missing key, invalid input, private file and upstream failures',async()=>{const app=createApp({key:''});assert.equal((await request(app)).status,503);assert.equal((await request(app,{body:{mode:'chat',messages:[]}})).status,400);assert.equal((await request(app,{path:'/.env',method:'GET'})).status,404);const bad=createApp({key:'test-only',fetchImpl:async()=>new Response('private provider error',{status:401})});const r=await request(bad);assert.equal(r.status,502);assert.ok(!r.text.includes('private provider'));});
+test('compatible platform URL, model and key are used together without redirects',async()=>{let called=false;const app=createApp({key:'test-only',baseURL:'https://www.kamente.com/v1/',fetchImpl:async(url,options)=>{called=true;assert.equal(url,'https://www.kamente.com/v1/chat/completions');assert.equal(options.redirect,'error');const body=JSON.parse(options.body);assert.equal(body.model,'glm-5.3-flash');assert.ok(!('thinking' in body));return new Response(JSON.stringify({choices:[{finish_reason:'stop',message:{content:'兼容接口测试'}}]}));}});assert.equal((await request(app)).status,200);assert.ok(called);const invalid=createApp({key:'test-only',baseURL:'http://gateway.example/v1'});assert.equal((await request(invalid)).status,503);});
