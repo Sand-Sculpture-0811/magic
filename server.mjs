@@ -33,7 +33,7 @@ export function createApp({key=process.env.GLM_API_KEY,model=process.env.GLM_MOD
  try{
  const weatherURL=new URL('https://api.open-meteo.com/v1/forecast');weatherURL.search=new URLSearchParams({latitude,longitude,daily:'weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,wind_speed_10m_max,uv_index_max',timezone:'auto',forecast_days:'1'});
  const response=await fetchImpl(weatherURL.href,{signal:AbortSignal.timeout(15000),redirect:'error'});
- if(!response.ok)return json(502,{error:'天气平台暂时不可用，暂不提供温度或降雨结论。'});
+ if(!response.ok){console.error('WEATHER_UPSTREAM_ERROR',{status:response.status});return json(502,{error:`天气平台暂时不可用（HTTP ${response.status}），正在尝试备用连接。`,upstreamStatus:response.status});}
  const raw=await response.json(),day=raw.daily;
  const data={date:day?.time?.[0],min:day?.temperature_2m_min?.[0],max:day?.temperature_2m_max?.[0],rain:day?.precipitation_probability_max?.[0],wind:day?.wind_speed_10m_max?.[0],uv:day?.uv_index_max?.[0],code:day?.weather_code?.[0],fetchedAt:new Date().toISOString()};
  if(!/^\d{4}-\d{2}-\d{2}$/.test(data.date||'')||!['min','max','rain','wind','uv','code'].every(k=>typeof data[k]==='number'&&Number.isFinite(data[k]))||data.min>data.max||data.rain<0||data.rain>100)return json(502,{error:'天气平台数据不完整，暂不提供天气结论。'});
@@ -88,7 +88,7 @@ export function createApp({key=process.env.GLM_API_KEY,model=process.env.GLM_MOD
  if(req.method!=='GET')return json(405,{error:'不支持此请求。'});
  const files={'/':['index.html','text/html'],'/index.html':['index.html','text/html'],'/style.css':['style.css','text/css'],'/app.js':['app.js','text/javascript']};
  if(!files[path])return json(404,{error:'未找到页面。'});
- try{const [file,type]=files[path];const data=await readFile(resolve(root,file));res.writeHead(200,{'Content-Type':type+'; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer','Content-Security-Policy':"default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; frame-ancestors 'none'; base-uri 'none'"});res.end(data);}catch{json(500,{error:'页面读取失败。'});}
+ try{const [file,type]=files[path];const data=await readFile(resolve(root,file));res.writeHead(200,{'Content-Type':type+'; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer','Content-Security-Policy':"default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self' https://api.open-meteo.com; img-src 'self' data:; frame-ancestors 'none'; base-uri 'none'"});res.end(data);}catch{json(500,{error:'页面读取失败。'});}
  });
 }
 if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){const port=Number(process.env.PORT||8765);createApp().listen(port,process.env.HOST||'127.0.0.1',()=>console.log(`星命之书：http://127.0.0.1:${port} · AI ${process.env.GLM_API_KEY?'已配置':'未配置密钥'}`));}
