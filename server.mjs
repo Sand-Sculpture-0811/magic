@@ -32,7 +32,20 @@ export function createApp({key=process.env.GLM_API_KEY,model=process.env.GLM_MOD
  const instructions=common+'必须简短：简单问题一句话，其他回答尽量在 100 个中文字以内，最多 180 字。最多给一个建议或一个追问，不分栏、不复述问题、不输出思考过程。'+preferences[body.style||'balanced']+(body.mode==='emotion'?'这是情绪树洞。先回应用户具体感受，不评判，不强行积极，不把苦难归因于运势。用一到三句短句，最多一个温和问题，不声称自己是人或治疗师。如存在明确即时自伤危险，优先关注当下安全，鼓励联系身边可信的人及当地紧急服务。':'直接回应问题，结合用户自愿附上的摘要，适度追问缺失背景，不编造其生活经历。');
  const input=body.messages.slice(-5).map(m=>({role:m.role,content:m.content.slice(0,1000)}));if(body.context)input.unshift({role:'user',content:'以下是我自愿附上的娱乐解读背景：\n'+body.context});
  const upstream=await fetchImpl(endpoint,{method:'POST',headers:{'Authorization':`Bearer ${key}`,'Content-Type':'application/json'},body:JSON.stringify({model,messages:[{role:'system',content:instructions},...input],stream:false,...(/^glm-/i.test(model)&&['disabled','enabled'].includes(thinkingMode)?{thinking:{type:thinkingMode}}:{}),max_tokens:512}),redirect:'error',signal:AbortSignal.timeout(45000)});
- if(!upstream.ok)return json(upstream.status===429?429:502,{error:upstream.status===401?'模型平台拒绝了密钥，请检查 GLM_BASE_URL 是否与 GLM_API_KEY 所属平台一致，以及令牌状态和权限。':upstream.status===429?'AI 服务额度或频率受限，请稍后重试并检查账户额度。':'AI 服务暂不可用，请检查模型配置后重试。'});
+ if(!upstream.ok){
+ let details;try{details=await upstream.json();}catch{details=null;}
+ const providerCode=details?.error?.code??details?.code;
+ const rawMessage=details?.error?.message??details?.message;
+ // Forward only a short redacted explanation; never log keys, prompts or raw responses.
+ let hint=typeof rawMessage==='string'?rawMessage:'';
+ for(const secret of [key,accessCode])if(secret)hint=hint.split(secret).join('[已隐藏]');
+ hint=hint.replace(/Bearer\s+[^\s,;]+/gi,'Bearer [已隐藏]').replace(/sk-[A-Za-z0-9_.-]+/g,'[已隐藏]').replace(/[\r\n]+/g,' ').slice(0,240);
+ const code=typeof providerCode==='string'||typeof providerCode==='number'?String(providerCode).replace(/[^a-zA-Z0-9_.-]/g,'').slice(0,60):'';
+ console.warn('AI_UPSTREAM_ERROR',JSON.stringify({status:upstream.status,code,model,provider:new URL(endpoint).hostname}));
+ const messages={400:'模型平台拒绝了请求参数，请核对模型名及 thinking 参数。',401:'模型平台拒绝了密钥，请核对平台地址与密钥。',402:'模型平台额度不足，请检查账户余额或套餐。',403:'当前令牌无权调用该模型，请检查模型权限或令牌限制。',404:'模型或接口不存在，请核对平台中的模型 ID 与 Base URL。',422:'模型平台不接受当前参数格式。',429:'模型平台限流或额度受限，请检查套餐并稍后重试。'};
+ const message=messages[upstream.status]||'模型平台暂时无法提供服务，请稍后重试或联系平台。';
+ return json(upstream.status===429?429:502,{error:`${message}（上游 HTTP ${upstream.status}${code?'，'+code:''}）${hint?' '+hint:''}`});
+ }
  const data=await upstream.json();const choice=data.choices?.[0];const content=choice?.message?.content;
  const text=typeof content==='string'?content.trim():Array.isArray(content)?content.filter(part=>part&&['text','output_text'].includes(part.type)&&typeof part.text==='string').map(part=>part.text).join('\n').trim():'';
  if(!text){
