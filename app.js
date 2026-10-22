@@ -313,3 +313,103 @@ form.addEventListener('reset',()=>{provinceSelect.value='';populateCities('');$(
 syncLocationSelectors();
 $('reply-style').value=['balanced','listen','practical'].includes(companion.replyStyle)?companion.replyStyle:'balanced';
 $('reply-style').addEventListener('change',()=>{companion.replyStyle=$('reply-style').value;storeCompanion();});
+
+// DAILY_CORE_START — pure daily content, shared by rendering and regression checks.
+const DAILY_PALETTES=[
+ {name:'莓果红',paper:'#f3e7eb',ink:'#52262e',accent:'#ad3449',leaf:'#92ad76',butter:'#f2d89f',muted:'#7c5b65',soft:'#e7d3db'},
+ {name:'鼠尾草绿',paper:'#e9eee4',ink:'#294534',accent:'#52754c',leaf:'#9fae6e',butter:'#f2d89f',muted:'#5c6c5d',soft:'#d4dfcc'},
+ {name:'雾霾蓝',paper:'#e6edf1',ink:'#283f50',accent:'#476f89',leaf:'#91ae8c',butter:'#edd9ad',muted:'#586e7b',soft:'#cfdde6'},
+ {name:'杏子橙',paper:'#f5e9de',ink:'#57352b',accent:'#a85231',leaf:'#99ad76',butter:'#f4d38b',muted:'#816355',soft:'#ecd6c2'},
+ {name:'丁香紫',paper:'#ede7f2',ink:'#45314f',accent:'#78518a',leaf:'#a0b08d',butter:'#efd8a4',muted:'#74627d',soft:'#dfd1e8'},
+ {name:'燕麦棕',paper:'#f0ece2',ink:'#493a2b',accent:'#85633f',leaf:'#97a47c',butter:'#ecd49b',muted:'#786956',soft:'#e2d8c5'}
+];
+const DAILY_QUOTES=[
+ ['你不必一次走完整条路，只要回到眼前这一步。','把注意力带回此刻，允许自己从小处开始。'],
+ ['情绪可以经过你，但不必替你决定方向。','先给感受一个位置，再选择怎样回应。'],
+ ['今天的你，不需要靠忙碌证明值得。','给安静和休息也留一个座位。'],
+ ['慢下来，也是一种认真生活的方式。','尝一口水的温度，看一眼窗外的光。'],
+ ['此刻不够确定，也可以好好照顾自己。','不用先找到全部答案，才开始过今天。'],
+ ['把目光从别人的进度，收回自己的脚下。','正在发生的小变化，同样值得被看见。'],
+ ['留一点空白，生活才有地方安放惊喜。','不必把每一段时间都填满。'],
+ ['你可以温柔，也可以有清晰的边界。','理解别人时，不必省略自己的感受。'],
+ ['允许自己是一朵还在慢慢开的花。','成长没有统一的时刻表。'],
+ ['有些答案，会在你不再催促时浮现。','让身体歇一歇，也让心事缓一缓。'],
+ ['不完美的一天，也值得被善待。','一顿饭、一段风，都可以重新连接今天。'],
+ ['把今天的力气，花在真实珍惜的事上。','从一件让你觉得踏实的小事开始。'],
+ ['有时候，放下比较就是找回自己。','把“应该怎样”换成“此刻需要什么”。'],
+ ['认真听见自己，也是一种勇敢。','不需要把每一种感受立刻解释清楚。'],
+ ['你的呼吸在这里，新的片刻也在这里。','轻轻松开肩膀，让这一刻自然过去。'],
+ ['日子不必发光，每一个普通片刻都算数。','为今天找到一件微小但真实的喜欢。']
+];
+function dailyHash(value){let n=2166136261;for(const c of String(value))n=Math.imul(n^c.charCodeAt(0),16777619)>>>0;return n;}
+function currentCityZone(city){const map={东京:'Asia/Tokyo',首尔:'Asia/Seoul',新加坡:'Asia/Singapore',伦敦:'Europe/London',纽约:'America/New_York',洛杉矶:'America/Los_Angeles',悉尼:'Australia/Sydney',巴黎:'Europe/Paris'};return map[city]||'Asia/Shanghai';}
+function cityToday(city,now=new Date()){const parts=new Intl.DateTimeFormat('en-CA',{timeZone:currentCityZone(city),year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(now);const get=t=>parts.find(p=>p.type===t).value;return `${get('year')}-${get('month')}-${get('day')}`;}
+function buildDaily(profile,city,mood,date,spread=[]){
+ const visible=spread.filter(c=>c.revealed).map(c=>[c.id,c.reversed]);const seed=dailyHash(JSON.stringify([date,city,profile?.date||'',profile?.time||'',profile?.mbti||'',profile?.place||'',profile?.zone||'8']));
+ const palette=DAILY_PALETTES[dailyHash(seed+':palette:'+JSON.stringify(visible))%DAILY_PALETTES.length],number=1+seed%9;
+ const sign=profile?sunSign(profile):null,b=profile?pillars(profile):null,asc=profile?ascendant(profile):null;
+ const moodCopy={normal:['今天不用把每一件事都安排妥当。先把眼前的小事做好，再给喜欢的事留一点位置。','认真吃一顿饭；把一件小事收尾；在路上看看天空。','把空闲也变成任务；因为别人着急就打乱自己的步幅。'],tired:['今天先照顾好吃饭和休息，再挑一件小事慢慢收口。你不需要用力过猛，也可以把日子过好。','缩小任务范围；穿得舒服一点；把不必要的回应往后放。','硬撑着装作有精神；同时开启很多件事；忽略自己的疲惫。'],restless:['今天的思绪有点拥挤，先别急着解释自己。让身体慢下来，再把注意力放回手边的一件小事。','一次只做一件事；先听完再回应；把复杂的话说简单。','反复猜测别人的心意；一着急就答应；不停切换任务。'],bright:['今天有好心情，就让它多停留一会儿。去表达一点喜欢，也把这份轻盈留给普通的小事。','分享一件好事；给喜欢的人一句具体的欣赏；尝试新搭配。','因为一时兴奋做过多承诺；忙着记录而忘了体验。']};
+ const copy=moodCopy[mood]||moodCopy.normal;
+ const fallback=['先把眼前的小事做好，再给自己留一点空白。','不用把全部想法一次说完，清楚的一句话就很好。','让喜欢落进日常，一件舒服的衣服也算。','今天更适合小步行动，做完一件就值得停留。'];
+ const traits=profile?PERSONALITIES[profile.mbti]:null;
+ const guides=[
+ ['☾ 月亮意象 · 把感受放稳',mood==='tired'?'疲惫可以被如实承认。先给自己一顿正常的饭和可以暂停的空隙，不必急着把状态调整成别人喜欢的样子。':`${sign?SIGN_STORIES[sign][1]+'。':''}${fallback[0]}`],
+ ['☿ 水星意象 · 把话说清楚',traits?`${profile.mbti}的你可能${traits[0]}。今天可以试着${traits[2]}，不用把交流变成一场必须立刻有结论的讨论。`:fallback[1]],
+ ['♀ 金星意象 · 给日常一点喜欢',`${palette.name}是今天的审美线索，不需要为“幸运”额外消费。让已有的衣物、杯子或小配饰带上一点这个颜色，就已经很好。`],
+ ['♂ 火星意象 · 小步也在向前',asc?`借上升${asc.sign}的意象提醒自己：${SIGN_STORIES[asc.sign][2]}。${mood==='tired'?'把今天的任务缩小到力所能及的范围。':fallback[3]}`:fallback[3]]];
+ const drinks=['常温白水','一杯温水','喜欢的无糖茶','温热的白水','一杯淡茶','随身的一瓶水'];
+ const quoteOrder=DAILY_QUOTES.map((q,i)=>({index:i,rank:dailyHash(seed+':quote:'+i)})).sort((a,b)=>a.rank-b.rank).slice(0,4).map(x=>x.index);
+ return {seed,palette,number,date,city,headline:copy[0],yes:copy[1],no:copy[2],drink:drinks[seed%drinks.length],guides,quoteOrder,sign,element:b?.element,asc:asc?.sign,personal:profile?`${sign}${asc?' · 上升'+asc.sign:''} · ${profile.mbti} · 日主${b.element}意象`:'轻量通用手记 · 完善个人命盘后生成更贴近你的建议'};
+}
+function describeWeather(code){if(code===0)return '晴';if([1,2,3].includes(code))return '多云';if([45,48].includes(code))return '有雾';if([71,73,75,77,85,86].includes(code))return '有雪';if([95,96,99].includes(code))return '雷阵雨';if(code>=51&&code<=82)return '有雨';return '天气变化';}
+function dailyOutfit(weather,palette,mood){
+ if(!weather)return `天气暂未读取，先不按温度替你下结论。可以用${palette.name}围巾、袜子或包袋点缀已有衣物，出门前再查看当地预报。`;
+ const {min,max,rain,wind,uv}=weather;let clothing=max<=8?'保暖内搭加厚外套，围巾与保暖鞋袜也一起安排':max<=16?'长袖打底搭配保暖外套，怕冷时加一层针织':max<=23?'长袖或薄针织配可脱卸外套，方便室内外调整':max<=29?'轻薄上衣搭宽松下装，常待空调房时带件薄外搭':'选择轻薄透气的衣物，减少厚重叠穿';
+ const notes=[];if(max-min>=8)notes.push('早晚温差较大，用叠穿代替一整天穿同样的厚度');if(rain>=40||[51,53,55,56,57,61,63,65,66,67,80,81,82,95,96,99].includes(weather.code))notes.push('带伞，优先选择防滑、易打理的鞋子');if([71,73,75,77,85,86].includes(weather.code))notes.push('留意积雪结冰，保暖防滑鞋优先');if(wind>=30)notes.push('外层选能挡风的款式');if(uv>=6)notes.push('留意防晒，帽子也能成为搭配的一部分');
+ return `${min}–${max}°C，${clothing}。把${palette.name}放在${mood==='tired'?'一件柔软的内搭或袜子':'包袋、上衣或小配饰'}上就好，不必整套同色。${notes.length?notes.join('；')+'。':''}`;
+}
+// DAILY_CORE_END
+
+const DAILY_KEY='astra.daily.v1';let dailyState={city:'',mood:'normal',records:{}};let dailyWeather=null,dailyWeatherBusy=false,dailyWeatherError='',dailyGeneration=0,dailyModel=null;
+try{const saved=JSON.parse(localStorage.getItem(DAILY_KEY)||'null');if(saved&&typeof saved.city==='string'&&(!saved.city||cityLookup(saved.city))){dailyState.city=saved.city;dailyState.mood=['normal','tired','restless','bright'].includes(saved.mood)?saved.mood:'normal';if(saved.records&&typeof saved.records==='object'&&!Array.isArray(saved.records))for(const [key,value] of Object.entries(saved.records).slice(-40)){if(value&&Array.isArray(value.scratched)&&value.scratched.every(v=>typeof v==='boolean')&&value.scratched.length===3&&(value.choice===null||Number.isInteger(value.choice)&&value.choice>=0&&value.choice<4))dailyState.records[key]={scratched:value.scratched,choice:value.choice};}}}catch{}
+function saveDaily(){try{const keys=Object.keys(dailyState.records);for(const key of keys.slice(0,Math.max(0,keys.length-40)))delete dailyState.records[key];localStorage.setItem(DAILY_KEY,JSON.stringify(dailyState));}catch{$('daily-city-error').textContent='本机空间不足，今天的抽卡记录暂未保存。';}}
+function dailyRecord(model){const key=model.date+'|'+model.city+'|'+model.seed;if(!dailyState.records[key])dailyState.records[key]={scratched:[false,false,false],choice:null};return dailyState.records[key];}
+function applyDailyPalette(palette){const p=palette||DAILY_PALETTES[5];for(const key of ['paper','ink','accent','leaf','butter','muted','soft'])document.documentElement.style.setProperty('--'+key,p[key]);document.querySelector('meta[name="theme-color"]').content=p.paper;$('daily-theme-note').textContent=dailyModel?`${p.name} · 由今日日期、个人命盘与已揭晓牌面生成`:'今日色彩会随你的手记变化';}
+function setDailyDate(date){const [year,month,day]=date.split('-');$('daily-month').textContent=month;$('daily-day').textContent=day;$('daily-year').textContent=year;const noon=new Date(date+'T12:00:00Z');let lunar='';try{lunar=new Intl.DateTimeFormat('zh-CN-u-ca-chinese',{month:'long',day:'numeric',timeZone:'UTC'}).format(noon);}catch{}$('daily-date-caption').textContent=new Intl.DateTimeFormat('zh-CN',{weekday:'long',timeZone:'UTC'}).format(noon)+' / '+lunar+' / TODAY, JUST BE YOU.';document.querySelector('.date-collage').setAttribute('aria-label',`${year} 年 ${Number(month)} 月 ${Number(day)} 日`);}
+function renderDailyGuide(){if(!dailyModel)return;const m=dailyModel;const goodWeather=dailyWeather&&dailyWeather.date===m.date?dailyWeather:null;$('daily-weather-label').textContent=dailyWeatherBusy?'正在读取天气…':goodWeather?`${describeWeather(goodWeather.code)} · ${goodWeather.min}–${goodWeather.max}°C`:'天气未获取';$('daily-guide-intro').textContent=`${m.city}的今天，${goodWeather?describeWeather(goodWeather.code)+'，'+goodWeather.min+'–'+goodWeather.max+'°C。':'先给自己留一点余地。'}${m.sign?`借${m.sign}的日常意象，`:'不论今天有多少安排，'}把注意力留给真实需要，不必把每件事都做成满分。`;
+ const box=$('daily-guide-items');box.replaceChildren();const items=[['✿ 今日穿搭 · 把幸运色穿进生活',dailyOutfit(goodWeather,m.palette,dailyState.mood)],['◇ 生活小提醒',`今日幸运数字是 ${m.number}，只是一个游戏般的小记号，不用于投注或财务判断。${dailyState.mood==='bright'?'给好心情一个出口，分享一句欣赏，也给自己一个小小庆祝。':dailyState.mood==='restless'?'让手机消息稍等片刻，先听见自己当下真正需要什么。':'把喝水、吃饭和片刻休息放进日程，不必等所有事情完成才照顾自己。'}`],...m.guides];items.forEach(([title,text])=>{const article=document.createElement('article');article.className='daily-guide-item';const h=document.createElement('h4');h.textContent=title;const p=document.createElement('p');p.textContent=text;article.append(h,p);box.append(article);});
+ $('daily-weather-detail').textContent=goodWeather?`城市级预报 · ${goodWeather.date} · 降水概率 ${goodWeather.rain}% · 最大风速 ${goodWeather.wind} km/h · UV ${goodWeather.uv} · 更新于 ${new Date(goodWeather.fetchedAt).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit',timeZone:currentCityZone(m.city)})}`:dailyWeatherBusy?'天气查询中，其他日报内容已可使用。':dailyWeatherError||'天气未读取，穿搭建议仅提供色彩灵感，不推测实际温度。';$('daily-weather-retry').disabled=dailyWeatherBusy;}
+function renderDailyScratches(){const box=$('daily-scratches');box.replaceChildren();const m=dailyModel,record=dailyRecord(m);const values=[[m.palette.name,'今日幸运色'],[String(m.number),'今日幸运数字'],[m.drink,'今日补给']];values.forEach(([value,label],index)=>{const card=document.createElement('div');card.className='scratch-card scratch-'+index;const under=document.createElement('div');under.className='scratch-under';const strong=document.createElement('strong');strong.textContent=value;const small=document.createElement('span');small.textContent=label;under.append(strong,small);const canvas=document.createElement('canvas');canvas.className='scratch-mask';canvas.setAttribute('aria-hidden','true');const button=document.createElement('button');button.className='scratch-reveal';button.type='button';button.textContent=record.scratched[index]?'已揭晓':'直接揭晓';button.setAttribute('aria-label',`揭晓${label}`);card.append(under,canvas,button);box.append(card);
+ if(!record.scratched[index])under.setAttribute('aria-hidden','true');
+ const reveal=()=>{if(record.scratched[index])return;record.scratched[index]=true;under.removeAttribute('aria-hidden');card.classList.add('revealed');button.textContent='已揭晓';button.disabled=true;saveDaily();$('scratch-live').textContent=`${label}：${value}。`;};button.addEventListener('click',reveal);
+ if(record.scratched[index]){card.classList.add('revealed');button.disabled=true;return;}
+ let drawing=false,last=null,ctx,seen=new Set(),width=0,height=0;const observer=new ResizeObserver(()=>{const rect=canvas.getBoundingClientRect();if(!rect.width||!rect.height)return;const dpr=Math.min(window.devicePixelRatio||1,2);width=canvas.clientWidth;height=canvas.clientHeight;canvas.width=Math.round(width*dpr);canvas.height=Math.round(height*dpr);ctx=canvas.getContext('2d');ctx.scale(dpr,dpr);ctx.globalCompositeOperation='source-over';ctx.fillStyle=getComputedStyle(document.documentElement).getPropertyValue('--soft');ctx.fillRect(0,0,width,height);ctx.strokeStyle=getComputedStyle(document.documentElement).getPropertyValue('--ink');ctx.lineWidth=1;ctx.globalAlpha=.15;for(let x=-height;x<width;x+=14){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x+height,height);ctx.stroke();}ctx.globalAlpha=1;ctx.fillStyle=getComputedStyle(document.documentElement).getPropertyValue('--ink');ctx.textAlign='center';ctx.font='12px sans-serif';ctx.fillText('刮开看看 ✳',width/2,height/2+4);seen.clear();});observer.observe(canvas);
+ const erase=(x,y)=>{if(!ctx||record.scratched[index])return;ctx.globalCompositeOperation='destination-out';ctx.lineCap='round';ctx.lineJoin='round';ctx.lineWidth=34;ctx.beginPath();ctx.moveTo(last?.x??x,last?.y??y);ctx.lineTo(x,y);ctx.stroke();const from=last||{x,y};const steps=Math.max(1,Math.ceil(Math.hypot(x-from.x,y-from.y)/8));for(let step=0;step<=steps;step++){const px=from.x+(x-from.x)*step/steps,py=from.y+(y-from.y)*step/steps;for(let dx=-12;dx<=12;dx+=8)for(let dy=-12;dy<=12;dy+=8){const gx=Math.floor((px+dx)/width*20),gy=Math.floor((py+dy)/height*12);if(gx>=0&&gx<20&&gy>=0&&gy<12)seen.add(gx+gy*20);}}last={x,y};if(seen.size>=240*.32){reveal();observer.disconnect();}};
+ const point=e=>{const r=canvas.getBoundingClientRect();const matrix=new DOMMatrix(getComputedStyle(canvas).transform==='none'?undefined:getComputedStyle(canvas).transform);const local=matrix.inverse().transformPoint(new DOMPoint(e.clientX-r.left-r.width/2,e.clientY-r.top-r.height/2));erase(local.x+width/2,local.y+height/2);};canvas.addEventListener('pointerdown',e=>{drawing=true;last=null;canvas.setPointerCapture(e.pointerId);point(e);});canvas.addEventListener('pointermove',e=>{if(drawing)point(e);});const end=()=>{drawing=false;last=null;};canvas.addEventListener('pointerup',end);canvas.addEventListener('pointercancel',end);button.addEventListener('click',()=>observer.disconnect());card._scratchObserver=observer;
+ });}
+const DAILY_SHAPES=[
+ '<path d="M70 32C34 10 5 43 12 88c7 36 33 40 54 33 28 12 57-12 56-48-1-29-26-51-52-41Z"/><path d="M66 33C57 10 77 7 82 6l-5 25Z"/>',
+ '<path d="M28 22c25-7 54-5 74 2l-5 76c-2 21-62 19-65-1Z"/><path d="M99 43c40-10 38 36-3 39" fill="none" stroke="currentColor" stroke-width="12"/>',
+ '<path d="M53 18h52v57c0 15-8 23-23 26l-40 10c-25 7-36-24-18-35l29-17Z"/>',
+ '<path d="M28 46c-27-16-5-39 40-39s68 21 40 39v67H28Z"/>'
+];
+function renderMindful(){const box=$('daily-mindful-cards');box.replaceChildren();const m=dailyModel,record=dailyRecord(m);const labels=['苹果','咖啡杯','袜子','吐司'];for(let i=0;i<4;i++){const button=document.createElement('button');button.type='button';button.className='mindful-card shape-'+i+(record.choice===i?' selected':'');button.disabled=record.choice!==null;button.setAttribute('aria-label',record.choice===i?`已抽取${labels[i]}小卡`:`抽取${labels[i]}正念小卡`);button.innerHTML=`<svg viewBox="0 0 140 140" aria-hidden="true">${DAILY_SHAPES[i]}</svg><span>(${String(i+1).padStart(2,'0')})</span>`;button.addEventListener('click',()=>{if(record.choice!==null)return;record.choice=i;saveDaily();renderMindful();});box.append(button);}
+ const quote=$('daily-quote');quote.replaceChildren();if(record.choice!==null){const text=DAILY_QUOTES[m.quoteOrder[record.choice]];const title=document.createElement('small');title.textContent='TODAY’S LITTLE REMINDER · 今日已抽取';const h=document.createElement('h4');h.textContent=text[0];const p=document.createElement('p');p.textContent=text[1];quote.append(title,h,p);}else{const p=document.createElement('p');p.className='tiny-note';p.textContent='四张里选一张，今天不重复抽取。';quote.append(p);}}
+function refreshDaily(){setDailyDate(cityToday(dailyState.city));if(!dailyState.city){dailyModel=null;$('daily-content').hidden=true;$('daily-empty').hidden=false;applyDailyPalette(state.profile?DAILY_PALETTES[dailyHash(state.profile.date+state.profile.mbti)%6]:null);return;}dailyModel=buildDaily(state.profile,dailyState.city,dailyState.mood,cityToday(dailyState.city),state.spread);applyDailyPalette(dailyModel.palette);$('daily-content').hidden=false;$('daily-empty').hidden=true;$('daily-headline').textContent=dailyModel.headline;$('daily-personal-note').textContent=dailyModel.personal;$('daily-yes').textContent=dailyModel.yes;$('daily-no').textContent=dailyModel.no;$('daily-city-label').textContent=dailyModel.city+' · 今日手记';for(const card of $('daily-scratches').children)card._scratchObserver?.disconnect();renderDailyScratches();renderDailyGuide();renderMindful();saveDaily();}
+async function fetchDailyWeather(){if(!dailyState.city||dailyWeatherBusy)return;const generation=++dailyGeneration,city=dailyState.city,date=cityToday(city),coords=cityLookup(city);dailyWeatherBusy=true;dailyWeatherError='';renderDailyGuide();try{if(location.protocol==='file:')throw Error('当前为本地文件预览，天气需通过网站服务端读取；日报其他内容仍可使用。');const params=new URLSearchParams({latitude:String(coords[1]),longitude:String(coords[0]),date});const response=await fetch('/api/weather?'+params,{signal:AbortSignal.timeout(25000),cache:'no-store'});let data;try{data=await response.json();}catch{throw Error('天气服务尚未部署，当前不显示实时温度。');}if(!response.ok)throw Error(data.error||'天气读取失败。');if(data.date!==date||!['min','max','rain','wind','uv','code'].every(k=>Number.isFinite(data[k]))||!Number.isFinite(Date.parse(data.fetchedAt)))throw Error('天气日期或数据格式不符，已停止使用这份预报。');if(generation===dailyGeneration&&city===dailyState.city)dailyWeather=data;}catch(error){if(generation===dailyGeneration){dailyWeather=null;dailyWeatherError=error.name==='TimeoutError'?'天气查询超时，暂不显示温度；可点击更新天气重试。':error.message;}}finally{if(generation===dailyGeneration){dailyWeatherBusy=false;renderDailyGuide();}}}
+for(const group of PLACE_GROUPS.keys()){const o=document.createElement('option');o.value=group;o.textContent=group;$('daily-province').append(o);}
+function populateDailyCities(group){const select=$('daily-city');select.replaceChildren();const p=document.createElement('option');p.value='';p.textContent=group?'请选择当前城市':'请先选择省份';select.append(p);select.disabled=!PLACE_GROUPS.has(group);for(const city of PLACE_GROUPS.get(group)||[]){const o=document.createElement('option');o.value=city.value;o.textContent=city.label;select.append(o);}}
+$('daily-province').addEventListener('change',()=>populateDailyCities($('daily-province').value));
+if(dailyState.city){for(const [group,cities] of PLACE_GROUPS){const found=cities.find(c=>c.value===dailyState.city);if(found){$('daily-province').value=group;populateDailyCities(group);$('daily-city').value=found.value;break;}}}
+$('daily-mood').value=dailyState.mood;
+$('daily-city-form').addEventListener('submit',e=>{e.preventDefault();const city=$('daily-city').value;if(!cityLookup(city)){$('daily-city-error').textContent='请先选择当前所在的省份和城市。';return;}dailyGeneration++;dailyWeatherBusy=false;if(city!==dailyState.city)dailyWeather=null;dailyState.city=city;dailyState.mood=$('daily-mood').value;$('daily-city-error').textContent='';refreshDaily();fetchDailyWeather();});
+$('daily-weather-retry').addEventListener('click',fetchDailyWeather);
+form.addEventListener('submit',()=>{if(!validate(draft()))refreshDaily();});
+$('clear-data').addEventListener('click',()=>{if(!state.profile)refreshDaily();});
+// Palette and content follow already-revealed cards; no extra model requests.
+$('cards').addEventListener('click',()=>{if(dailyState.city)refreshDaily();});
+let dailyLastDate=cityToday(dailyState.city);document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&cityToday(dailyState.city)!==dailyLastDate){dailyLastDate=cityToday(dailyState.city);dailyWeather=null;refreshDaily();fetchDailyWeather();}});
+setInterval(()=>{const date=cityToday(dailyState.city);if(date!==dailyLastDate){dailyLastDate=date;dailyWeather=null;refreshDaily();fetchDailyWeather();}},60000);
+refreshDaily();if(dailyState.city)fetchDailyWeather();
+
+$('redraw').addEventListener('click',refreshDaily);

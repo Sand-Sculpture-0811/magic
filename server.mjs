@@ -13,7 +13,7 @@ export function finishAsStatement(text){
 }
 export function createApp({key=process.env.GLM_API_KEY,model=process.env.GLM_MODEL||'glm-5.3-flash',baseURL=process.env.GLM_BASE_URL||'https://www.kamente.com/v1',publicOrigin=process.env.PUBLIC_ORIGIN||process.env.RENDER_EXTERNAL_URL||'',accessCode=process.env.AI_ACCESS_CODE||'',thinkingMode=process.env.GLM_THINKING||'disabled',fetchImpl=fetch}={}){
  let endpoint;try{const url=new URL(baseURL.trim());if(url.protocol!=='https:'||url.username||url.password||url.search||url.hash)throw Error();url.pathname=url.pathname.replace(/\/+$/,'').replace(/\/chat\/completions$/,'')+'/chat/completions';endpoint=url.href;}catch{endpoint=null;}
- let active=0;let recent=[];
+ let active=0;let recent=[];const weatherCache=new Map();let weatherActive=0;
  return http.createServer(async(req,res)=>{
  const json=(status,data)=>{res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});res.end(JSON.stringify(data));};
  if(req.method==='GET'&&req.url==='/healthz')return json(200,{status:'ok'});
@@ -22,6 +22,25 @@ export function createApp({key=process.env.GLM_API_KEY,model=process.env.GLM_MOD
  if(allowedHost?host!==allowedHost:!/^(127\.0\.0\.1|localhost):\d+$/.test(host||''))return json(403,{error:'访问域名不匹配。'});
  const path=new URL(req.url,'http://'+host).pathname;
  if(req.method==='GET'&&path==='/api/status')return json(200,{ready:Boolean(key)&&Boolean(endpoint)&&(!publicOrigin||accessCode.length>=16),model,provider:endpoint?new URL(endpoint).hostname:'未配置有效接口',accessRequired:Boolean(accessCode)||Boolean(publicOrigin)});
+ if(req.method==='GET'&&path==='/api/weather'){
+ const query=new URL(req.url,'http://'+host).searchParams;
+ const lat=query.get('latitude'),lon=query.get('longitude'),requestedDate=query.get('date');
+ if(lat===null||lon===null||lat.trim()===''||lon.trim()===''||!Number.isFinite(Number(lat))||!Number.isFinite(Number(lon))||Math.abs(Number(lat))>90||Math.abs(Number(lon))>180||!/^\d{4}-\d{2}-\d{2}$/.test(requestedDate||''))return json(400,{error:'请选择有效的当前城市。'});
+ const latitude=Number(lat).toFixed(2),longitude=Number(lon).toFixed(2),cacheKey=latitude+','+longitude+':'+requestedDate;
+ const cached=weatherCache.get(cacheKey);if(cached&&Date.now()-cached.saved<20*60000)return json(200,cached.data);
+ if(weatherActive>=4)return json(429,{error:'天气查询较多，请稍后再试。'});
+ weatherActive++;
+ try{
+ const weatherURL=new URL('https://api.open-meteo.com/v1/forecast');weatherURL.search=new URLSearchParams({latitude,longitude,daily:'weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,wind_speed_10m_max,uv_index_max',timezone:'auto',forecast_days:'1'});
+ const response=await fetchImpl(weatherURL.href,{signal:AbortSignal.timeout(15000),redirect:'error'});
+ if(!response.ok)return json(502,{error:'天气平台暂时不可用，暂不提供温度或降雨结论。'});
+ const raw=await response.json(),day=raw.daily;
+ const data={date:day?.time?.[0],min:day?.temperature_2m_min?.[0],max:day?.temperature_2m_max?.[0],rain:day?.precipitation_probability_max?.[0],wind:day?.wind_speed_10m_max?.[0],uv:day?.uv_index_max?.[0],code:day?.weather_code?.[0],fetchedAt:new Date().toISOString()};
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(data.date||'')||!['min','max','rain','wind','uv','code'].every(k=>typeof data[k]==='number'&&Number.isFinite(data[k]))||data.min>data.max||data.rain<0||data.rain>100)return json(502,{error:'天气平台数据不完整，暂不提供天气结论。'});
+ if(data.date!==requestedDate)return json(502,{error:'预报日期尚未同步到当前城市的今天，请稍后更新。'});
+ if(weatherCache.size>=100)weatherCache.delete(weatherCache.keys().next().value);weatherCache.set(cacheKey,{saved:Date.now(),data});return json(200,data);
+ }catch{return json(502,{error:'天气查询暂时失败，日报和小卡仍可使用。'});}finally{weatherActive--;}
+ }
  if(req.method==='POST'&&path==='/api/chat'){
  if(req.headers.origin!==(publicOrigin||`http://${host}`)||req.headers['content-type']?.split(';')[0]!=='application/json')return json(403,{error:'请从本站页面发送请求。'});
  if(publicOrigin&&(!publicOrigin.startsWith('https://')||accessCode.length<16))return json(503,{error:'公网服务需配置 HTTPS 地址和至少 16 位 AI 访问码。'});
