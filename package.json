@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "start": "node --env-file-if-exists=.env server.mjs",
-    "test": "node --test server.test.mjs daily.test.mjs"
+    "test": "node --test server.test.mjs daily.test.mjs calendar.test.mjs"
   },
   "engines": {
     "node": ">=22"

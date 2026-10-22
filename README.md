@@ -83,3 +83,15 @@ GLM 请求默认发送 `thinking.type=disabled`，可通过 `GLM_THINKING` 设�
 
 ## 个性化原则
 项目以个性化为核心：日报、每日补给、幸运元素、图案及建议需依据用户命盘（太阳、上升、八字）、MBTI、周期、日期及已揭晓塔罗生成。心情影响表达，天气决定实际穿衣厚度与防雨建议。资料不足时明确标注通用内容，不伪装成个人测算。保留娱乐参考说明，不把运势或饮品写成事实预测及健康功效。
+
+
+## 历法修复（2026-10-23）
+- `vendor/lunar.js`：固定 lunar-javascript 1.7.7，MIT 授权保留于 `vendor/lunar-LICENSE.txt`。从 npm 官方包引入并验证 SHA-512 完整性；浏览器离线运行，无 CDN 依赖。上游：https://github.com/6tail/lunar-javascript
+- `calendar.js`：公历/农历双向转换、闰月及大小月校验、统一八字计算。公历换算范围 1901—2100；出生表单仍只允许当前时刻之前。
+- 农历以正月初一换年，与八字年柱在立春交节时刻换年区分；八字月柱按十二“节”的准确交节时刻，不使用农历月份。时刻先按出生 UTC 偏移转换为北京时间；日柱00:00换日，23:00—23:59按当日日干推子时天干，保持同一换日口径。不校正真太阳时，历史夏令时需用户核对。
+- 页面公历生日下显示对应农历；农历输入须明确是否闰月，非法闰月或不存在的三十日会报错，不自动滚入下月。转换后的公历生日保存到原有草稿。
+- 日报使用同一库显示“初一、廿九、三十”等完整农历日期与农历年干支。
+- `calendar.test.mjs`：春节、闰月、大小月、立春前后、日干支基准、子时与跨时区边界及1200个日期的双向换算。
+- 对照资料：[香港天文台公农历对照表](https://www.hko.gov.hk/sc/gts/time/conversion.htm)、[2024年历](https://www.hko.gov.hk/tc/gts/astron2024/files/HKO_almanac_2024.pdf)、[天干和地支](https://www.hko.gov.hk/sc/gts/time/stemsandbranches.htm)。
+
+部署时必须保留 `vendor` 文件夹层级，同时上传 `calendar.js`、`calendar.test.mjs` 及更新后的 `package.json`、`server.mjs`、`Dockerfile`。没有 npm 安装步骤；历法数据随网页分发。
