@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {Readable} from 'node:stream';
-import {createApp as createProductionApp} from './server.mjs';
+import {createApp as createProductionApp,finishAsStatement} from './server.mjs';
 // Tests must never inherit deployment origins, access codes, models or API credentials.
 function createApp(options={}){return createProductionApp({thinkingMode:'disabled',baseURL:'https://open.bigmodel.cn/api/paas/v4',key:'',model:'glm-5.3-flash',publicOrigin:'',accessCode:'',fetchImpl:async()=>{throw Error('Unexpected upstream request in test');},...options});}
 function request(app,{path='/api/chat',method='POST',body={mode:'chat',messages:[{role:'user',content:'你好'}]},origin='http://localhost:8765',host='localhost:8765',code=''}={}){return new Promise(resolve=>{const req=Readable.from([Buffer.from(JSON.stringify(body))]);Object.assign(req,{url:path,method,headers:{host,origin,'content-type':'application/json','x-astra-access':code}});const res={writeHead(status,headers){this.status=status;},end(text){resolve({status:this.status,text:String(text),json:()=>JSON.parse(text)});}};app.emit('request',req,res);});}
@@ -18,3 +18,5 @@ test('brief output cap and compact conversation history',async()=>{let sent;cons
 test('upstream model errors are actionable and secret values are redacted',async()=>{for(const status of [400,402,403,404,422,429,503]){const app=createApp({key:'secret-test-value',accessCode:'access-test-value',fetchImpl:async()=>new Response(JSON.stringify({error:{code:'model_not_found',message:'Unsupported model; secret-test-value access-test-value sk-test-secret'}}),{status})});const r=await request(app,{code:'access-test-value'});assert.equal(r.status,status===429?429:502);assert.match(r.json().error,new RegExp('HTTP '+status));assert.ok(!r.text.includes('secret-test-value'));assert.ok(!r.text.includes('access-test-value'));assert.ok(!r.text.includes('sk-test-secret'));}});
 
 test('omit mode intentionally excludes thinking without breaking compatibility',async()=>{const app=createApp({key:'test-only',thinkingMode:'omit',fetchImpl:async(url,options)=>{assert.ok(!('thinking' in JSON.parse(options.body)));return new Response(JSON.stringify({choices:[{finish_reason:'stop',message:{content:'简短回应'}}]}));}});assert.equal((await request(app)).status,200);});
+
+test('ready-to-send replies do not end with follow-up questions',()=>{assert.equal(finishAsStatement('慢慢来就好。你觉得呢？'),'慢慢来就好。');assert.equal(finishAsStatement('先休息一下。需要我继续吗？'),'先休息一下。');assert.equal(finishAsStatement('你想怎样？'),'目前信息不足以作出明确判断，具体以实际情况为准。');assert.equal(finishAsStatement('你的努力值得被看见。'),'你的努力值得被看见。');});
