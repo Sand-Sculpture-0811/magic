@@ -12,7 +12,6 @@ const PORTAL_ANSWERS=[
 const PORTAL_COMMON=['不必把这句话当成命令，感受自己的回应。','先照顾眼前的真实需要。','给自己一个可以修改的选择。','相信此刻的你仍有调整的余地。'];
 function portalAnswerPool(focus){return [...(PORTAL_ANSWERS[focus]||PORTAL_ANSWERS[5]),...PORTAL_COMMON];}
 function timerRemaining(timer,now=Date.now()){return timer.running?Math.max(0,timer.deadline-now):Math.max(0,timer.remaining);}
-function coinLanding(previousTurns,side){return Math.ceil(previousTurns/360)*360+1800+(side?180:0);}
 let ritualState={answerQuestion:'',answer:'',answerBasis:'',decisionQuestion:'',decision:null,minutes:3,mode:'breath',timer:{running:false,remaining:180000,deadline:0,started:0,completed:false},sessions:0};
 try{
  const saved=JSON.parse(localStorage.getItem(PORTAL_KEY)||'null');
@@ -68,14 +67,25 @@ function openAnswer(){
  },book.classList.contains('has-opened')?400:80);book.classList.add('has-opened');
 }
 $('answer-book').addEventListener('click',openAnswer);$('answer-again').addEventListener('click',openAnswer);
-let coinTurns=ritualState.decision===1?180:0,coinBusy=false;
-$('decision-coin').style.transform=`rotateY(${coinTurns}deg)`;
-function renderCoinResult(){if(ritualState.decision!==null)$('decision-result').textContent=ritualState.decision===0?'正面 · YES。留意自己对这个答案的第一反应。':'反面 · NO。暂缓也可以，听听自己的真实想法。';}
-renderCoinResult();
+let toasterBusy=false;
+function renderToastResult(){
+ if(ritualState.decision===null)return;
+ const yes=ritualState.decision===0;
+ $('toast-word').textContent=yes?'YES':'NO';
+ $('decision-result').textContent=yes?'面包烤好啦 · YES。留意自己对这个答案的第一反应。':'面包烤好啦 · NO。暂缓也可以，听听自己的真实想法。';
+ $('coin-flip').textContent='再烤一片 ↗';
+}
+renderToastResult();
 $('coin-flip').addEventListener('click',()=>{
- if(coinBusy)return;coinBusy=true;$('coin-flip').disabled=true;$('decision-result').textContent='硬币在空中，先听见自己希望的答案…';
- const side=randomInt(2);coinTurns=coinLanding(coinTurns,side);$('decision-coin').style.transform=`rotateY(${coinTurns}deg)`;$('decision-coin').classList.add('tossing');
- setTimeout(()=>{ritualState.decision=side;storeRituals();renderCoinResult();$('decision-coin').classList.remove('tossing');coinBusy=false;$('coin-flip').disabled=false;},window.matchMedia('(prefers-reduced-motion: reduce)').matches?80:1800);
+ if(toasterBusy)return;toasterBusy=true;$('coin-flip').disabled=true;$('coin-flip').textContent='正在烘烤…';
+ const stage=$('toaster-stage'),reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+ stage.classList.remove('toast-popped');stage.classList.add('toasting');
+ $('decision-result').textContent='面包正在烘烤，先听见自己希望的答案…';
+ const side=randomInt(2);
+ setTimeout(()=>{
+  ritualState.decision=side;storeRituals();renderToastResult();stage.classList.remove('toasting');stage.classList.add('toast-popped');
+  setTimeout(()=>{toasterBusy=false;$('coin-flip').disabled=false;},reduced?80:750);
+ },reduced?80:1600);
 });
 $('meditation-minutes').value=String(ritualState.minutes);$('meditation-mode').value=ritualState.mode;
 function renderMeditation(){
