@@ -86,7 +86,7 @@ export function createApp({key=process.env.GLM_API_KEY,model=process.env.GLM_MOD
  }catch{return json(502,{error:'AI 服务连接超时或网络异常，请稍后重试。'});}finally{active--;}
  }
  if(req.method!=='GET')return json(405,{error:'不支持此请求。'});
- const files={'/vendor/lunar.js':['vendor/lunar.js','text/javascript'],'/calendar.js':['calendar.js','text/javascript'],'/':['index.html','text/html'],'/index.html':['index.html','text/html'],'/style.css':['style.css','text/css'],'/app.js':['app.js','text/javascript']};
+ const files={'/portal.js':['portal.js','text/javascript'],'/vendor/lunar.js':['vendor/lunar.js','text/javascript'],'/calendar.js':['calendar.js','text/javascript'],'/':['index.html','text/html'],'/index.html':['index.html','text/html'],'/style.css':['style.css','text/css'],'/app.js':['app.js','text/javascript']};
  if(!files[path])return json(404,{error:'未找到页面。'});
  try{const [file,type]=files[path];const data=await readFile(resolve(root,file));res.writeHead(200,{'Content-Type':type+'; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer','Content-Security-Policy':"default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self' https://api.open-meteo.com; img-src 'self' data:; frame-ancestors 'none'; base-uri 'none'"});res.end(data);}catch{json(500,{error:'页面读取失败。'});}
  });
