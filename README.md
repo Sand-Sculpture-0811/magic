@@ -115,3 +115,7 @@ GLM 请求默认发送 `thinking.type=disabled`，可通过 `GLM_THINKING` 设�
 ## 手机字体兼容修复
 旧版手写字体引用桌面系统字体，未安装的手机会回退成普通字体。新版将开源 Ma Shan Zheng 字体压缩为 `fonts/astra-hand.woff2`，以 `Astra Hand` 为网页字体名，包含GB2312常用字和网站文案用字。保留原授权 `fonts/MaShanZheng-OFL.txt`，子集字体内部命名为 AstraHand。字体源：https://github.com/google/fonts/tree/main/ofl/mashanzheng 。采用 `font-display: swap`：先显示系统备用字体，再替换网页字体，避免等待字体时空白；正文继续使用系统无衬线字体以保证清晰。原生标题衬线栈仍按设备回退。
 `server.mjs` 增加精确字体路由和 `font/woff2` 类型，字体缓存一天；Docker增加复制 `fonts/`。上传时需要将 `fonts` 文件夹整体上传并保留目录。字体不会从Google CDN或用户手机系统加载。
+
+
+## 字体风格调整
+取消毛笔手写体在界面中的使用，也不再发起其字体下载。中文正文、结果和提示采用系统无衬线字体；标题与书页金句保留克制的衬线风格，日期及计时数字保留复古数字字体。重点调整面包结果字号、行距与字距，减少装饰性文字。旧字体文件及路由暂保留，以兼容尚未刷新的旧网页，不参与新版渲染。

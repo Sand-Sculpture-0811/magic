@@ -95,8 +95,19 @@ main{max-width:1360px}.daily-section{padding-top:36px}.daily-directory{justify-c
 @media(prefers-reduced-motion:reduce){.toasting .answer-toast{transform:translateY(151px)}.toast-popped .answer-toast{animation:none;transform:translateY(0) rotate(-4deg)}.toast-popped .toast-steam,.toasting .toaster-machine{animation:none}.answer-toast,.toaster-lever i{transition:none}}
 .toast-rack{position:absolute;inset:0 0 143px;overflow:hidden;z-index:2;pointer-events:none}.toast-rack .answer-toast{bottom:8px}
 
-/* Bundled webfont: mobile devices must not depend on desktop-only handwriting. */
-@font-face{font-family:"Astra Hand";src:url("fonts/astra-hand.woff2?v=1") format("woff2");font-style:normal;font-weight:400;font-display:swap}
-:root{--font-soft:"Astra Hand","Kaiti SC","STKaiti","KaiTi","PingFang SC","Microsoft YaHei",serif;font-synthesis:weight}
+/* Calm typography: clean Chinese text, restrained serif headings, no brush lettering. */
+:root{--font-body:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans CJK SC",sans-serif;--font-soft:var(--font-body);font-synthesis:weight}
 html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
-body{font-family:var(--font-body);color:var(--ink)}
+body{font-family:var(--font-body);color:var(--ink);letter-spacing:.015em}
+.decision-result{font-family:var(--font-body);font-size:19px;line-height:1.9;font-weight:400;letter-spacing:.025em;max-width:480px;min-height:75px}
+.book-page strong{font-family:var(--font-title);font-size:25px;line-height:1.9;font-weight:500;letter-spacing:.055em}
+.breathing-core span{font-family:var(--font-body);font-size:20px;letter-spacing:.08em;font-weight:400}
+.daily-quote h4{font-family:var(--font-title);font-size:25px;font-weight:500;line-height:1.85}
+.daily-intro .eyebrow{font-family:var(--font-body);font-size:12px;letter-spacing:.14em}
+.daily-motif-label{font-family:var(--font-body);font-size:12px;letter-spacing:.08em;transform:none}
+.daily-yesno b{font-family:var(--font-body);font-size:13px;font-weight:600;letter-spacing:.08em}
+.reading-summary h3{font-family:var(--font-title);font-size:20px}
+.toaster-detail{font-family:var(--font-body);font-size:9px;letter-spacing:.06em}
+.cosmos-note{font-family:var(--font-body);font-size:11px;line-height:1.9;letter-spacing:.1em;transform:none}
+.mindful-inscription em{font-family:var(--font-body);font-size:17px;font-weight:400;letter-spacing:.06em}
+@media(max-width:760px){.decision-result{font-size:17px;line-height:1.95;max-width:315px}.book-page strong{font-size:22px}.breathing-core span{font-size:18px}.daily-quote h4{font-size:22px}.daily-motif-label{font-size:12px}.cosmos-note{font-size:10px}}
