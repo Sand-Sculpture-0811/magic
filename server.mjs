@@ -86,9 +86,9 @@ export function createApp({key=process.env.GLM_API_KEY,model=process.env.GLM_MOD
  }catch{return json(502,{error:'AI 服务连接超时或网络异常，请稍后重试。'});}finally{active--;}
  }
  if(req.method!=='GET')return json(405,{error:'不支持此请求。'});
- const files={'/portal.js':['portal.js','text/javascript'],'/vendor/lunar.js':['vendor/lunar.js','text/javascript'],'/calendar.js':['calendar.js','text/javascript'],'/':['index.html','text/html'],'/index.html':['index.html','text/html'],'/style.css':['style.css','text/css'],'/app.js':['app.js','text/javascript']};
+ const files={'/fonts/astra-hand.woff2':['fonts/astra-hand.woff2','font/woff2'],'/portal.js':['portal.js','text/javascript'],'/vendor/lunar.js':['vendor/lunar.js','text/javascript'],'/calendar.js':['calendar.js','text/javascript'],'/':['index.html','text/html'],'/index.html':['index.html','text/html'],'/style.css':['style.css','text/css'],'/app.js':['app.js','text/javascript']};
  if(!files[path])return json(404,{error:'未找到页面。'});
- try{const [file,type]=files[path];const data=await readFile(resolve(root,file));res.writeHead(200,{'Content-Type':type+'; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer','Content-Security-Policy':"default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self' https://api.open-meteo.com; img-src 'self' data:; frame-ancestors 'none'; base-uri 'none'"});res.end(data);}catch{json(500,{error:'页面读取失败。'});}
+ try{const [file,type]=files[path];const data=await readFile(resolve(root,file));res.writeHead(200,{'Content-Type':type+'; charset=utf-8','Cache-Control':path.startsWith('/fonts/')?'public, max-age=86400':'no-store','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer','Content-Security-Policy':"default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self' https://api.open-meteo.com; img-src 'self' data:; frame-ancestors 'none'; base-uri 'none'"});res.end(data);}catch{json(500,{error:'页面读取失败。'});}
  });
 }
 if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){const port=Number(process.env.PORT||8765);createApp().listen(port,process.env.HOST||'127.0.0.1',()=>console.log(`星命之书：http://127.0.0.1:${port} · AI ${process.env.GLM_API_KEY?'已配置':'未配置密钥'}`));}

@@ -1,6 +1,7 @@
 FROM node:24-alpine
 WORKDIR /app
 COPY --chown=node:node vendor ./vendor
+COPY --chown=node:node fonts ./fonts
 COPY --chown=node:node package.json server.mjs index.html style.css app.js calendar.js portal.js ./
 ENV NODE_ENV=production HOST=0.0.0.0 PORT=8765
 USER node

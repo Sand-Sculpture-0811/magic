@@ -26,3 +26,7 @@ test('offline calendar scripts are publicly served without exposing private file
  const app=createApp();for(const path of ['/calendar.js?v=20261023-2','/vendor/lunar.js?v=1.7.7','/portal.js?v=20261023-3']){const response=await request(app,{method:'GET',path});assert.equal(response.status,200);assert.ok(response.text.length>100);}
  assert.equal((await request(app,{method:'GET',path:'/vendor/../.env'})).status,404);
 });
+test('bundled mobile font is served as WOFF2, not a missing HTML page',async()=>{
+ const response=await request(createApp(),{method:'GET',path:'/fonts/astra-hand.woff2?v=1'});
+ assert.equal(response.status,200);assert.equal(response.text.slice(0,4),'wOF2');
+});

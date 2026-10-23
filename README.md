@@ -110,3 +110,8 @@ GLM 请求默认发送 `thinking.type=disabled`，可通过 `GLM_THINKING` 设�
 
 ## 新增功能视觉打磨
 答案之书增加布纹封面、烫金细框、纸页侧边和纸张内页，标题与正文区分衬线和手记字体。面包机采用本地SVG吐司和CSS搪瓷机身、金属旋钮、压杆、加热指示灯与蒸汽，动画执行落入、烘烤、弹起和回弹；连续点击期间锁定操作，开启减少动态效果时直接揭晓。正念区域采用半透明柔光球体、轨道光环和独立数字字体，按呼吸节奏轻微缩放。无外部图片或建模依赖，手机端检查无横向溢出。
+
+
+## 手机字体兼容修复
+旧版手写字体引用桌面系统字体，未安装的手机会回退成普通字体。新版将开源 Ma Shan Zheng 字体压缩为 `fonts/astra-hand.woff2`，以 `Astra Hand` 为网页字体名，包含GB2312常用字和网站文案用字。保留原授权 `fonts/MaShanZheng-OFL.txt`，子集字体内部命名为 AstraHand。字体源：https://github.com/google/fonts/tree/main/ofl/mashanzheng 。采用 `font-display: swap`：先显示系统备用字体，再替换网页字体，避免等待字体时空白；正文继续使用系统无衬线字体以保证清晰。原生标题衬线栈仍按设备回退。
+`server.mjs` 增加精确字体路由和 `font/woff2` 类型，字体缓存一天；Docker增加复制 `fonts/`。上传时需要将 `fonts` 文件夹整体上传并保留目录。字体不会从Google CDN或用户手机系统加载。

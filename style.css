@@ -94,3 +94,9 @@ main{max-width:1360px}.daily-section{padding-top:36px}.daily-directory{justify-c
 @media(max-width:360px){.toaster-stage{transform:scale(.84);margin-left:-5%;width:110%;margin-top:-10px;margin-bottom:-25px}.ritual-tool h1{font-size:28px}.breathing-scene{width:250px;height:250px}.breathing-core strong{font-size:42px}.breathing-core small{font-size:8px}}
 @media(prefers-reduced-motion:reduce){.toasting .answer-toast{transform:translateY(151px)}.toast-popped .answer-toast{animation:none;transform:translateY(0) rotate(-4deg)}.toast-popped .toast-steam,.toasting .toaster-machine{animation:none}.answer-toast,.toaster-lever i{transition:none}}
 .toast-rack{position:absolute;inset:0 0 143px;overflow:hidden;z-index:2;pointer-events:none}.toast-rack .answer-toast{bottom:8px}
+
+/* Bundled webfont: mobile devices must not depend on desktop-only handwriting. */
+@font-face{font-family:"Astra Hand";src:url("fonts/astra-hand.woff2?v=1") format("woff2");font-style:normal;font-weight:400;font-display:swap}
+:root{--font-soft:"Astra Hand","Kaiti SC","STKaiti","KaiTi","PingFang SC","Microsoft YaHei",serif;font-synthesis:weight}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+body{font-family:var(--font-body);color:var(--ink)}
